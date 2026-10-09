@@ -13,4 +13,4 @@ msgid "plugins.generic.fullTextLanguageLabel.displayName"
 msgstr "Indicador de idioma do texto integral"
 
 msgid "plugins.generic.fullTextLanguageLabel.description"
-msgstr "Exibe o idioma do texto integral ao lado dos links de composição em PDF."
+msgstr "Exibe o idioma do texto integral ao lado dos links de composição."
