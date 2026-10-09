@@ -7,7 +7,7 @@ A generic plugin for Open Journal Systems (OJS) that displays the language of th
 This release is intended for:
 
 - OJS 3.3.0-x
-- Initially tested for OJS 3.3.0-22
+- Initial target: OJS 3.3.0-22
 
 ## Features
 
