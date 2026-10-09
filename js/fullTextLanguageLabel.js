@@ -1,14 +1,27 @@
 (function () {
   "use strict";
 
+  /*
+   * Maximum number of article pages requested
+   * simultaneously.
+   */
   const MAX_CONCURRENT_REQUESTS = 4;
 
   async function applyFullTextLanguageLabels() {
+    /*
+     * Common full-text galley classes used by OJS themes.
+     *
+     * Some themes use a specific format class, while
+     * others use the generic "file" class.
+     */
     const fullTextLinks = Array.from(
       document.querySelectorAll(
         [
           "a.obj_galley_link.pdf",
-          "a.obj_galley_link.file"
+          "a.obj_galley_link.file",
+          "a.obj_galley_link.html",
+          "a.obj_galley_link.epub",
+          "a.obj_galley_link.xml"
         ].join(", ")
       )
     );
@@ -17,6 +30,9 @@
       return;
     }
 
+    /*
+     * Groups all galleys that belong to the same article.
+     */
     const articles = new Map();
 
     function removeAccents(value) {
@@ -25,6 +41,10 @@
         .replace(/[\u0300-\u036f]/g, "");
     }
 
+    /*
+     * Detects an explicitly declared language in labels
+     * such as PDF (English), HTML (Español), etc.
+     */
     function getLanguageFromLabel(link) {
       const label = removeAccents(
         link.textContent
@@ -54,6 +74,15 @@
       return "";
     }
 
+    /*
+     * Converts a galley URL such as:
+     *
+     * /article/view/2817/1173
+     *
+     * into the article landing page:
+     *
+     * /article/view/2817
+     */
     function getArticleUrl(galleyUrl) {
       const result = String(galleyUrl).match(
         /^(.*\/article\/view\/\d+)(?:\/.*)?$/
@@ -62,6 +91,15 @@
       return result ? result[1] : "";
     }
 
+    /*
+     * Accepts values such as:
+     *
+     * pt
+     * pt-BR
+     * pt_BR
+     * en-US
+     * es_ES
+     */
     function normalizeLanguage(value) {
       const language = String(value || "")
         .trim()
@@ -91,6 +129,10 @@
       }
     }
 
+    /*
+     * Reads the language metadata from the article
+     * landing page.
+     */
     async function fetchArticleLanguage(articleUrl) {
       const cacheKey =
         "ojs-fulltext-language:v1:" + articleUrl;
@@ -141,6 +183,10 @@
       }
     }
 
+    /*
+     * Adds the language and its source to the list item
+     * that contains the galley link.
+     */
     function applyLanguage(
       link,
       language,
@@ -197,8 +243,8 @@
     let nextArticleIndex = 0;
 
     /*
-     * Limit simultaneous requests so large issues do not
-     * overload the journal server.
+     * Limits simultaneous requests so that large issues
+     * do not overload the journal server.
      */
     async function worker() {
       while (
@@ -245,6 +291,10 @@
     );
   }
 
+  /*
+   * Supports loading the script from either the page
+   * header or footer.
+   */
   if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",
