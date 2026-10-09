@@ -1,0 +1,46 @@
+name: Build OJS plugin package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Validate and package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate PHP syntax
+        run: |
+          php -l index.php
+          php -l FullTextLanguageLabelPlugin.inc.php
+
+      - name: Validate JavaScript syntax
+        run: node --check js/fullTextLanguageLabel.js
+
+      - name: Build plugin directory
+        run: |
+          mkdir -p build/fullTextLanguageLabel
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            ./ build/fullTextLanguageLabel/
+
+      - name: Create OJS package
+        run: |
+          tar -czf fullTextLanguageLabel-1.0.0.0-ojs3.3.tar.gz \
+            -C build \
+            fullTextLanguageLabel
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: fullTextLanguageLabel-1.0.0.0-ojs3.3
+          path: fullTextLanguageLabel-1.0.0.0-ojs3.3.tar.gz
+          if-no-files-found: error
