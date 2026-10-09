@@ -8,7 +8,7 @@
  * @class FullTextLanguageLabelPlugin
  * @ingroup plugins_generic_fullTextLanguageLabel
  *
- * @brief Adds full-text language labels beside PDF galley links.
+ * @brief Adds language labels beside full-text galley links.
  */
 
 import('lib.pkp.classes.plugins.GenericPlugin');
