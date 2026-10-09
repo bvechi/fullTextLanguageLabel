@@ -1,18 +1,23 @@
 (function () {
   "use strict";
 
+  const MAX_CONCURRENT_REQUESTS = 4;
+
   async function applyFullTextLanguageLabels() {
-    const pdfLinks = Array.from(
+    const fullTextLinks = Array.from(
       document.querySelectorAll(
-        "a.obj_galley_link.pdf"
+        [
+          "a.obj_galley_link.pdf",
+          "a.obj_galley_link.file"
+        ].join(", ")
       )
     );
 
-    if (!pdfLinks.length) {
+    if (!fullTextLinks.length) {
       return;
     }
 
-    const articleRequests = new Map();
+    const articles = new Map();
 
     function removeAccents(value) {
       return String(value || "")
@@ -20,9 +25,9 @@
         .replace(/[\u0300-\u036f]/g, "");
     }
 
-    function getLanguageFromLabel(pdfLink) {
+    function getLanguageFromLabel(link) {
       const label = removeAccents(
-        pdfLink.textContent
+        link.textContent
       ).toLowerCase();
 
       if (
@@ -49,8 +54,8 @@
       return "";
     }
 
-    function getArticleUrl(pdfUrl) {
-      const result = String(pdfUrl).match(
+    function getArticleUrl(galleyUrl) {
+      const result = String(galleyUrl).match(
         /^(.*\/article\/view\/\d+)(?:\/.*)?$/
       );
 
@@ -136,46 +141,107 @@
       }
     }
 
-    await Promise.all(
-      pdfLinks.map(async function (pdfLink) {
-        let language =
-          getLanguageFromLabel(pdfLink);
+    function applyLanguage(
+      link,
+      language,
+      source
+    ) {
+      const listItem = link.closest("li");
 
-        let source = "galley-label";
+      if (!listItem || !language) {
+        return;
+      }
+
+      listItem.dataset.ojsFulltextLanguage =
+        language;
+
+      listItem.dataset.ojsLanguageSource =
+        source;
+    }
+
+    /*
+     * Resolve labels that explicitly declare a language
+     * and group the remaining links by article.
+     */
+    fullTextLinks.forEach(function (link) {
+      const explicitLanguage =
+        getLanguageFromLabel(link);
+
+      if (explicitLanguage) {
+        applyLanguage(
+          link,
+          explicitLanguage,
+          "galley-label"
+        );
+
+        return;
+      }
+
+      const articleUrl = getArticleUrl(link.href);
+
+      if (!articleUrl) {
+        return;
+      }
+
+      if (!articles.has(articleUrl)) {
+        articles.set(articleUrl, []);
+      }
+
+      articles.get(articleUrl).push(link);
+    });
+
+    const pendingArticles = Array.from(
+      articles.entries()
+    );
+
+    let nextArticleIndex = 0;
+
+    /*
+     * Limit simultaneous requests so large issues do not
+     * overload the journal server.
+     */
+    async function worker() {
+      while (
+        nextArticleIndex < pendingArticles.length
+      ) {
+        const currentIndex = nextArticleIndex;
+        nextArticleIndex += 1;
+
+        const entry =
+          pendingArticles[currentIndex];
+
+        const articleUrl = entry[0];
+        const links = entry[1];
+
+        const language =
+          await fetchArticleLanguage(articleUrl);
 
         if (!language) {
-          const articleUrl =
-            getArticleUrl(pdfLink.href);
-
-          if (!articleUrl) {
-            return;
-          }
-
-          if (!articleRequests.has(articleUrl)) {
-            articleRequests.set(
-              articleUrl,
-              fetchArticleLanguage(articleUrl)
-            );
-          }
-
-          language =
-            await articleRequests.get(articleUrl);
-
-          source = "article-metadata";
+          continue;
         }
 
-        const listItem = pdfLink.closest("li");
+        links.forEach(function (link) {
+          applyLanguage(
+            link,
+            language,
+            "article-metadata"
+          );
+        });
+      }
+    }
 
-        if (!listItem || !language) {
-          return;
+    const workerCount = Math.min(
+      MAX_CONCURRENT_REQUESTS,
+      pendingArticles.length
+    );
+
+    await Promise.all(
+      Array.from(
+        { length: workerCount },
+        function () {
+          return worker();
         }
-
-        listItem.dataset.ojsFulltextLanguage =
-          language;
-
-        listItem.dataset.ojsLanguageSource =
-          source;
-      })
+      )
     );
   }
 
