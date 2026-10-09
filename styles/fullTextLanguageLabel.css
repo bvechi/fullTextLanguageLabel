@@ -1,0 +1,99 @@
+/**
+ * Full Text Language Label
+ *
+ * Displays the full-text language beside OJS PDF galley links.
+ */
+
+
+/* Portuguese interface */
+
+html[lang|="pt" i]
+li[data-ojs-fulltext-language="pt"] {
+  --ojs-fulltext-language-label:
+    "Texto em português";
+}
+
+html[lang|="pt" i]
+li[data-ojs-fulltext-language="en"] {
+  --ojs-fulltext-language-label:
+    "Texto em inglês";
+}
+
+html[lang|="pt" i]
+li[data-ojs-fulltext-language="es"] {
+  --ojs-fulltext-language-label:
+    "Texto em espanhol";
+}
+
+
+/* Spanish interface */
+
+html[lang|="es" i]
+li[data-ojs-fulltext-language="pt"] {
+  --ojs-fulltext-language-label:
+    "Texto en portugués";
+}
+
+html[lang|="es" i]
+li[data-ojs-fulltext-language="en"] {
+  --ojs-fulltext-language-label:
+    "Texto en inglés";
+}
+
+html[lang|="es" i]
+li[data-ojs-fulltext-language="es"] {
+  --ojs-fulltext-language-label:
+    "Texto en español";
+}
+
+
+/* English interface */
+
+html[lang|="en" i]
+li[data-ojs-fulltext-language="pt"] {
+  --ojs-fulltext-language-label:
+    "Full text in Portuguese";
+}
+
+html[lang|="en" i]
+li[data-ojs-fulltext-language="en"] {
+  --ojs-fulltext-language-label:
+    "Full text in English";
+}
+
+html[lang|="en" i]
+li[data-ojs-fulltext-language="es"] {
+  --ojs-fulltext-language-label:
+    "Full text in Spanish";
+}
+
+
+/* PDF link and language label alignment */
+
+.galleys_links
+li[data-ojs-fulltext-language] {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+}
+
+
+/* Language label */
+
+.galleys_links
+li[data-ojs-fulltext-language]::after {
+  content:
+    var(--ojs-fulltext-language-label, "");
+
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
