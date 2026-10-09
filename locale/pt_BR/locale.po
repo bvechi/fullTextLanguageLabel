@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Full Text Language Label\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: Portuguese (Brazil)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+
+msgid "plugins.generic.fullTextLanguageLabel.displayName"
+msgstr "Indicador de idioma do texto integral"
+
+msgid "plugins.generic.fullTextLanguageLabel.description"
+msgstr "Exibe o idioma do texto integral ao lado dos links de composição em PDF."
