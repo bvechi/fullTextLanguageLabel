@@ -1,19 +1,44 @@
 (function () {
   "use strict";
 
+  /*
+   * Maximum number of article pages requested
+   * simultaneously.
+   */
+  const MAX_CONCURRENT_REQUESTS = 4;
+
   async function applyFullTextLanguageLabels() {
-    const pdfLinks = Array.from(
+    /*
+     * Common full-text galley classes used by OJS themes.
+     *
+     * Some themes use a specific format class, while
+     * others use the generic "file" class.
+     */
+    const fullTextLinks = Array.from(
       document.querySelectorAll(
-        "a.obj_galley_link.pdf"
+        [
+          "a.obj_galley_link.pdf",
+          "a.obj_galley_link.file",
+          "a.obj_galley_link.html",
+          "a.obj_galley_link.epub",
+          "a.obj_galley_link.xml"
+        ].join(", ")
       )
     );
 
-    if (!pdfLinks.length) {
+    if (!fullTextLinks.length) {
       return;
     }
 
-    const articleRequests = new Map();
+    /*
+     * Groups all galleys that belong to the same article.
+     */
+    const articles = new Map();
 
+    /*
+     * Galley locales provided by the plugin on pages
+     * where OJS exposes the galleys being displayed.
+     */
     const galleyLocales =
       window.fullTextLanguageLabelGalleyLocales || {};
 
@@ -23,9 +48,13 @@
         .replace(/[\u0300-\u036f]/g, "");
     }
 
-    function getLanguageFromLabel(pdfLink) {
+    /*
+     * Detects an explicitly declared language in labels
+     * such as PDF (English), HTML (Español), etc.
+     */
+    function getLanguageFromLabel(link) {
       const label = removeAccents(
-        pdfLink.textContent
+        link.textContent
       ).toLowerCase();
 
       if (
@@ -52,8 +81,19 @@
       return "";
     }
 
-    function getGalleyKey(pdfUrl) {
-      const result = String(pdfUrl).match(
+    /*
+     * Converts a galley URL such as:
+     *
+     * /article/view/2817/1173
+     * /article/view/my-article/version/12/pdf
+     *
+     * into the key used by the galley locale map:
+     *
+     * 2817/1173
+     * my-article/pdf
+     */
+    function getGalleyKey(galleyUrl) {
+      const result = String(galleyUrl).match(
         /\/article\/view\/([^/?#]+)\/(?:version\/\d+\/)?([^/?#]+)/
       );
 
@@ -72,20 +112,41 @@
       }
     }
 
-    function getLanguageFromGalleyLocale(pdfLink) {
+    /*
+     * Reads the galley language set in OJS.
+     */
+    function getLanguageFromGalleyLocale(link) {
       return normalizeLanguage(
-        galleyLocales[getGalleyKey(pdfLink.href)]
+        galleyLocales[getGalleyKey(link.href)]
       );
     }
 
-    function getArticleUrl(pdfUrl) {
-      const result = String(pdfUrl).match(
+    /*
+     * Converts a galley URL such as:
+     *
+     * /article/view/2817/1173
+     *
+     * into the article landing page:
+     *
+     * /article/view/2817
+     */
+    function getArticleUrl(galleyUrl) {
+      const result = String(galleyUrl).match(
         /^(.*\/article\/view\/\d+)(?:\/.*)?$/
       );
 
       return result ? result[1] : "";
     }
 
+    /*
+     * Accepts values such as:
+     *
+     * pt
+     * pt-BR
+     * pt_BR
+     * en-US
+     * es_ES
+     */
     function normalizeLanguage(value) {
       const language = String(value || "")
         .trim()
@@ -115,6 +176,10 @@
       }
     }
 
+    /*
+     * Reads the language metadata from the article
+     * landing page.
+     */
     async function fetchArticleLanguage(articleUrl) {
       const cacheKey =
         "ojs-fulltext-language:v1:" + articleUrl;
@@ -165,54 +230,132 @@
       }
     }
 
+    /*
+     * Adds the language and its source to the list item
+     * that contains the galley link.
+     */
+    function applyLanguage(
+      link,
+      language,
+      source
+    ) {
+      const listItem = link.closest("li");
+
+      if (!listItem || !language) {
+        return;
+      }
+
+      listItem.dataset.ojsFulltextLanguage =
+        language;
+
+      listItem.dataset.ojsLanguageSource =
+        source;
+    }
+
+    /*
+     * Resolve galley locales and labels that explicitly
+     * declare a language, and group the remaining links
+     * by article.
+     */
+    fullTextLinks.forEach(function (link) {
+      const galleyLanguage =
+        getLanguageFromGalleyLocale(link);
+
+      if (galleyLanguage) {
+        applyLanguage(
+          link,
+          galleyLanguage,
+          "galley-locale"
+        );
+
+        return;
+      }
+
+      const explicitLanguage =
+        getLanguageFromLabel(link);
+
+      if (explicitLanguage) {
+        applyLanguage(
+          link,
+          explicitLanguage,
+          "galley-label"
+        );
+
+        return;
+      }
+
+      const articleUrl = getArticleUrl(link.href);
+
+      if (!articleUrl) {
+        return;
+      }
+
+      if (!articles.has(articleUrl)) {
+        articles.set(articleUrl, []);
+      }
+
+      articles.get(articleUrl).push(link);
+    });
+
+    const pendingArticles = Array.from(
+      articles.entries()
+    );
+
+    let nextArticleIndex = 0;
+
+    /*
+     * Limits simultaneous requests so that large issues
+     * do not overload the journal server.
+     */
+    async function worker() {
+      while (
+        nextArticleIndex < pendingArticles.length
+      ) {
+        const currentIndex = nextArticleIndex;
+        nextArticleIndex += 1;
+
+        const entry =
+          pendingArticles[currentIndex];
+
+        const articleUrl = entry[0];
+        const links = entry[1];
+
+        const language =
+          await fetchArticleLanguage(articleUrl);
+
+        if (!language) {
+          continue;
+        }
+
+        links.forEach(function (link) {
+          applyLanguage(
+            link,
+            language,
+            "article-metadata"
+          );
+        });
+      }
+    }
+
+    const workerCount = Math.min(
+      MAX_CONCURRENT_REQUESTS,
+      pendingArticles.length
+    );
+
     await Promise.all(
-      pdfLinks.map(async function (pdfLink) {
-        let language =
-          getLanguageFromGalleyLocale(pdfLink);
-
-        let source = "galley-locale";
-
-        if (!language) {
-          language = getLanguageFromLabel(pdfLink);
-          source = "galley-label";
+      Array.from(
+        { length: workerCount },
+        function () {
+          return worker();
         }
-
-        if (!language) {
-          const articleUrl =
-            getArticleUrl(pdfLink.href);
-
-          if (!articleUrl) {
-            return;
-          }
-
-          if (!articleRequests.has(articleUrl)) {
-            articleRequests.set(
-              articleUrl,
-              fetchArticleLanguage(articleUrl)
-            );
-          }
-
-          language =
-            await articleRequests.get(articleUrl);
-
-          source = "article-metadata";
-        }
-
-        const listItem = pdfLink.closest("li");
-
-        if (!listItem || !language) {
-          return;
-        }
-
-        listItem.dataset.ojsFulltextLanguage =
-          language;
-
-        listItem.dataset.ojsLanguageSource =
-          source;
-      })
+      )
     );
   }
 
+  /*
+   * Supports loading the script from either the page
+   * header or footer.
+   */
   if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",

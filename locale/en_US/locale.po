@@ -13,4 +13,4 @@ msgid "plugins.generic.fullTextLanguageLabel.displayName"
 msgstr "Full Text Language Label"
 
 msgid "plugins.generic.fullTextLanguageLabel.description"
-msgstr "Displays the full-text language beside PDF galley links."
+msgstr "Displays the language beside full-text galley links."

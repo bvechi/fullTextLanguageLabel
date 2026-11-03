@@ -1,7 +1,7 @@
 /**
  * Full Text Language Label
  *
- * Displays the full-text language beside OJS PDF galley links.
+ * Displays the language beside OJS full-text galley links.
  */
 
 
@@ -68,7 +68,7 @@ li[data-ojs-fulltext-language="es"] {
 }
 
 
-/* PDF link and language label alignment */
+/* Full-text link and language label alignment */
 
 .galleys_links
 li[data-ojs-fulltext-language] {
