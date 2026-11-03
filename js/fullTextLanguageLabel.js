@@ -14,6 +14,9 @@
 
     const articleRequests = new Map();
 
+    const galleyLocales =
+      window.fullTextLanguageLabelGalleyLocales || {};
+
     function removeAccents(value) {
       return String(value || "")
         .normalize("NFD")
@@ -47,6 +50,32 @@
       }
 
       return "";
+    }
+
+    function getGalleyKey(pdfUrl) {
+      const result = String(pdfUrl).match(
+        /\/article\/view\/([^/?#]+)\/(?:version\/\d+\/)?([^/?#]+)/
+      );
+
+      if (!result) {
+        return "";
+      }
+
+      try {
+        return (
+          decodeURIComponent(result[1]) +
+          "/" +
+          decodeURIComponent(result[2])
+        );
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function getLanguageFromGalleyLocale(pdfLink) {
+      return normalizeLanguage(
+        galleyLocales[getGalleyKey(pdfLink.href)]
+      );
     }
 
     function getArticleUrl(pdfUrl) {
@@ -139,9 +168,14 @@
     await Promise.all(
       pdfLinks.map(async function (pdfLink) {
         let language =
-          getLanguageFromLabel(pdfLink);
+          getLanguageFromGalleyLocale(pdfLink);
 
-        let source = "galley-label";
+        let source = "galley-locale";
+
+        if (!language) {
+          language = getLanguageFromLabel(pdfLink);
+          source = "galley-label";
+        }
 
         if (!language) {
           const articleUrl =
