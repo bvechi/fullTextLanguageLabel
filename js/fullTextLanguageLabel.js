@@ -125,14 +125,16 @@
      * Converts a galley URL such as:
      *
      * /article/view/2817/1173
+     * /article/view/my-article/version/12/pdf
      *
      * into the article landing page:
      *
      * /article/view/2817
+     * /article/view/my-article
      */
     function getArticleUrl(galleyUrl) {
       const result = String(galleyUrl).match(
-        /^(.*\/article\/view\/\d+)(?:\/.*)?$/
+        /^(.*\/article\/view\/[^/?#]+)/
       );
 
       return result ? result[1] : "";
