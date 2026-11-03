@@ -78,6 +78,7 @@ The plugin adds attributes to the list item containing each PDF link:
 
 The language source may be:
 
+- `galley-locale`
 - `galley-label`
 - `article-metadata`
 
