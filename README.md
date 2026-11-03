@@ -26,10 +26,11 @@ This release is intended for:
 
 The plugin uses the following order:
 
-1. If the galley label explicitly declares a language, such as `PDF (English)` or `HTML (Español)`, that language is used.
-2. If the galley label does not declare a language, the plugin reads `citation_language` from the article landing page.
-3. If `citation_language` is unavailable, `DC.Language` is used as a fallback.
-4. If no supported language is found, no label is displayed.
+1. If the galley language is set in OJS, that language is used. It is read server-side on issue pages, the journal homepage and article pages.
+2. If the galley label explicitly declares a language, such as `PDF (English)` or `HTML (Español)`, that language is used.
+3. If neither is available, the plugin reads `citation_language` from the article landing page.
+4. If `citation_language` is unavailable, `DC.Language` is used as a fallback.
+5. If no supported language is found, no label is displayed.
 
 Supported language codes:
 
@@ -94,6 +95,7 @@ The plugin adds attributes to the list item containing each supported galley lin
 
 The language source may be:
 
+- `galley-locale`
 - `galley-label`
 - `article-metadata`
 
@@ -121,7 +123,9 @@ These attributes do not alter publication metadata.
 
 ## Performance
 
-On listing pages, links without an explicitly declared language require a same-origin request to the corresponding article landing page.
+On issue pages, the journal homepage and article pages, the galley language is provided by the plugin and no request is needed.
+
+On other listing pages, links without an explicitly declared language require a same-origin request to the corresponding article landing page.
 
 The plugin:
 

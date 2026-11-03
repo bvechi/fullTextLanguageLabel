@@ -35,6 +35,13 @@
      */
     const articles = new Map();
 
+    /*
+     * Galley locales provided by the plugin on pages
+     * where OJS exposes the galleys being displayed.
+     */
+    const galleyLocales =
+      window.fullTextLanguageLabelGalleyLocales || {};
+
     function removeAccents(value) {
       return String(value || "")
         .normalize("NFD")
@@ -72,6 +79,46 @@
       }
 
       return "";
+    }
+
+    /*
+     * Converts a galley URL such as:
+     *
+     * /article/view/2817/1173
+     * /article/view/my-article/version/12/pdf
+     *
+     * into the key used by the galley locale map:
+     *
+     * 2817/1173
+     * my-article/pdf
+     */
+    function getGalleyKey(galleyUrl) {
+      const result = String(galleyUrl).match(
+        /\/article\/view\/([^/?#]+)\/(?:version\/\d+\/)?([^/?#]+)/
+      );
+
+      if (!result) {
+        return "";
+      }
+
+      try {
+        return (
+          decodeURIComponent(result[1]) +
+          "/" +
+          decodeURIComponent(result[2])
+        );
+      } catch (error) {
+        return "";
+      }
+    }
+
+    /*
+     * Reads the galley language set in OJS.
+     */
+    function getLanguageFromGalleyLocale(link) {
+      return normalizeLanguage(
+        galleyLocales[getGalleyKey(link.href)]
+      );
     }
 
     /*
@@ -206,10 +253,24 @@
     }
 
     /*
-     * Resolve labels that explicitly declare a language
-     * and group the remaining links by article.
+     * Resolve galley locales and labels that explicitly
+     * declare a language, and group the remaining links
+     * by article.
      */
     fullTextLinks.forEach(function (link) {
+      const galleyLanguage =
+        getLanguageFromGalleyLocale(link);
+
+      if (galleyLanguage) {
+        applyLanguage(
+          link,
+          galleyLanguage,
+          "galley-locale"
+        );
+
+        return;
+      }
+
       const explicitLanguage =
         getLanguageFromLabel(link);
 
