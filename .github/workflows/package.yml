@@ -23,6 +23,17 @@ jobs:
       - name: Validate JavaScript syntax
         run: node --check js/fullTextLanguageLabel.js
 
+      - name: Read plugin version
+        run: |
+          release=$(sed -n 's:.*<release>\(.*\)</release>.*:\1:p' version.xml)
+
+          if [ -z "$release" ]; then
+            echo "::error file=version.xml::<release> not found"
+            exit 1
+          fi
+
+          echo "PACKAGE_NAME=fullTextLanguageLabel-${release}-ojs3.3" >> "$GITHUB_ENV"
+
       - name: Build plugin directory
         run: |
           mkdir -p build/fullTextLanguageLabel
@@ -34,13 +45,13 @@ jobs:
 
       - name: Create OJS package
         run: |
-          tar -czf fullTextLanguageLabel-1.0.0.0-ojs3.3.tar.gz \
+          tar -czf "${PACKAGE_NAME}.tar.gz" \
             -C build \
             fullTextLanguageLabel
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: fullTextLanguageLabel-1.0.0.0-ojs3.3
-          path: fullTextLanguageLabel-1.0.0.0-ojs3.3.tar.gz
+          name: ${{ env.PACKAGE_NAME }}
+          path: ${{ env.PACKAGE_NAME }}.tar.gz
           if-no-files-found: error
